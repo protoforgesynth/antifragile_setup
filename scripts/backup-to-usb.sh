@@ -1,6 +1,6 @@
 #!/bin/bash
 # backup-to-usb.sh — Backup critical data to encrypted USB drive
-# Run manually when USB is connected
+# Run manually or auto-triggered when USB is inserted
 
 set -euo pipefail
 
@@ -8,7 +8,9 @@ set -euo pipefail
 # Configuration
 # ============================================================
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="${ANTIFRAGILE_CONFIG:-$HOME/.config/antifragile}"
+LOG_DIR="$HOME/.local/log/antifragile"
 CREDENTIALS_FILE="$CONFIG_DIR/credentials.env"
 EXCLUDE_CONF="$CONFIG_DIR/exclude.conf"
 
@@ -16,6 +18,20 @@ EXCLUDE_CONF="$CONFIG_DIR/exclude.conf"
 USB_MOUNT="${USB_MOUNT:-/Volumes/ANTIFRAGILE}"
 USB_REPO="$USB_MOUNT/restic-repo"
 EMERGENCY_DIR="$USB_MOUNT/emergency"
+
+# Source notification helpers
+if [ -f "$SCRIPT_DIR/lib/notify.sh" ]; then
+    source "$SCRIPT_DIR/lib/notify.sh"
+else
+    notify_start() { :; }
+    notify_success() { :; }
+    notify_error() { :; }
+fi
+
+mkdir -p "$LOG_DIR"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+LOG_FILE="$LOG_DIR/backup_usb_$TIMESTAMP.log"
+START_TIME=$(date +%s)
 
 # Colors
 RED='\033[0;31m'
@@ -54,6 +70,7 @@ log_section "Pre-flight Checks"
 # Check if USB is mounted
 if [ ! -d "$USB_MOUNT" ]; then
     log_error "USB drive not mounted at $USB_MOUNT"
+    notify_error "USB" "Drive not mounted"
     echo ""
     echo "Available volumes:"
     ls /Volumes/ 2>/dev/null || echo "Cannot list /Volumes/"
@@ -113,6 +130,7 @@ mkdir -p "$EMERGENCY_DIR"
 # ============================================================
 
 log_section "Backing up Critical Data"
+notify_start "USB Drive"
 
 CRITICAL_PATHS=()
 
@@ -154,22 +172,48 @@ fi
 
 if [ ${#CRITICAL_PATHS[@]} -eq 0 ]; then
     log_error "No critical paths found to backup!"
+    notify_error "USB" "No paths to backup"
     exit 1
 fi
 
 # Build exclude args
-EXCLUDE_ARGS=""
+EXCLUDE_ARGS=()
 if [ -f "$EXCLUDE_CONF" ]; then
-    EXCLUDE_ARGS="--exclude-file=$EXCLUDE_CONF"
+    EXCLUDE_ARGS+=("--exclude-file=$EXCLUDE_CONF")
 fi
 
-# Run backup
+# Run backup with JSON progress
 log "Starting restic backup..."
 
-restic -r "$USB_REPO" backup \
-    "${CRITICAL_PATHS[@]}" \
-    $EXCLUDE_ARGS \
-    --verbose
+{
+    restic -r "$USB_REPO" backup \
+        "${CRITICAL_PATHS[@]}" \
+        "${EXCLUDE_ARGS[@]}" \
+        --json \
+        2>&1
+} | tee -a "$LOG_FILE" | while IFS= read -r line; do
+    if echo "$line" | grep -q '"message_type":"status"'; then
+        percent=$(echo "$line" | grep -o '"percent_done":[0-9.]*' | cut -d':' -f2 || echo "0")
+        if [ -n "$percent" ]; then
+            pct=$(awk "BEGIN {printf \"%.0f\", $percent * 100}")
+            files_done=$(echo "$line" | grep -o '"files_done":[0-9]*' | cut -d':' -f2 || echo "0")
+            bytes_done=$(echo "$line" | grep -o '"bytes_done":[0-9]*' | cut -d':' -f2 || echo "0")
+            cat > /tmp/antifragile-progress.json << EOF
+{"status":"running","type":"USB","percent":$pct,"files_done":$files_done,"bytes_done":$bytes_done,"updated":"$(date -Iseconds)"}
+EOF
+            # Show progress in terminal too
+            printf "\r  Progress: %3d%% (%d files)" "$pct" "$files_done"
+        fi
+    fi
+done
+echo ""  # newline after progress
+
+BACKUP_EXIT=${PIPESTATUS[0]}
+if [ "$BACKUP_EXIT" -ne 0 ]; then
+    log_error "Backup failed!"
+    notify_error "USB" "Backup failed"
+    exit 1
+fi
 
 log "Restic backup completed"
 
@@ -274,6 +318,27 @@ echo ""
 log "Recent snapshots:"
 restic -r "$USB_REPO" snapshots --last 3
 
+# Calculate duration
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+if [ "$DURATION" -ge 60 ]; then
+    DURATION_STR="$(($DURATION/60))m $(($DURATION%60))s"
+else
+    DURATION_STR="${DURATION}s"
+fi
+
+# Get backup size
+BACKUP_SIZE=$(restic -r "$USB_REPO" stats --json 2>/dev/null | grep -o '"total_size":[0-9]*' | cut -d':' -f2 || echo "")
+if [ -n "$BACKUP_SIZE" ] && [ "$BACKUP_SIZE" -ge 1073741824 ]; then
+    SIZE_STR="$(awk "BEGIN {printf \"%.1f\", $BACKUP_SIZE / 1073741824}")GB"
+elif [ -n "$BACKUP_SIZE" ] && [ "$BACKUP_SIZE" -ge 1048576 ]; then
+    SIZE_STR="$(awk "BEGIN {printf \"%.1f\", $BACKUP_SIZE / 1048576}")MB"
+else
+    SIZE_STR=""
+fi
+
+notify_success "USB Drive" "$DURATION_STR" "$SIZE_STR"
+
 echo ""
-log "USB backup complete!"
+log "USB backup complete! Duration: $DURATION_STR"
 log "Remember to safely eject the drive before removing."

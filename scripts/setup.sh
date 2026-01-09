@@ -55,6 +55,13 @@ if ! command -v restic &> /dev/null; then
 fi
 log "Restic: OK ($(restic version | head -1))"
 
+# Check/install terminal-notifier for better notifications
+if ! command -v terminal-notifier &> /dev/null; then
+    log "Installing terminal-notifier for notifications..."
+    brew install terminal-notifier
+fi
+log "terminal-notifier: OK"
+
 # Check for git
 if ! command -v git &> /dev/null; then
     log_error "Git not installed"
@@ -232,6 +239,7 @@ mkdir -p "$BIN_DIR"
 SCRIPTS=(
     "backup-to-b2.sh"
     "backup-to-usb.sh"
+    "backup-status.sh"
     "discover-dotfiles.sh"
     "pre-wipe-checklist.sh"
     "restore-from-backup.sh"

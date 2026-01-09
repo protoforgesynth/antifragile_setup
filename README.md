@@ -112,10 +112,43 @@ After setup, these commands are available:
 |---------|-------------|
 | `backup-to-b2` | Manual backup to Backblaze B2 |
 | `backup-to-usb` | Manual backup to USB |
+| `backup-status` | Live progress viewer with progress bar |
 | `restore-from-backup` | Interactive restore utility |
 | `pre-wipe-checklist` | Verify backups before wiping Mac |
 | `discover-dotfiles` | Scan for all dotfiles/configs |
 | `dotfiles` | Git alias for dotfiles repo |
+
+## Notifications & Progress
+
+Backups show real-time progress with macOS notifications:
+
+```
+┌─────────────────────────────────────────┐
+│ Antifragile Backup                      │
+│ Backup Started                          │
+│ Starting B2 Cloud backup...             │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ Antifragile Backup                      │
+│ Backup Complete                         │
+│ B2 Cloud backup complete in 5m 32s (2.1GB) │
+└─────────────────────────────────────────┘
+```
+
+**Watch progress in real-time:**
+```bash
+backup-status
+```
+
+Shows:
+```
+╔════════════════════════════════════════════════════════════╗
+║           Antifragile Backup Progress                      ║
+╚════════════════════════════════════════════════════════════╝
+
+Progress: [████████████░░░░░░░░░░░░░░░░░░] 42%  Files: 1234/2890  (156MB / 372MB)
+```
 
 ## Daily Workflow
 
