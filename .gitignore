@@ -1,0 +1,28 @@
+# Credentials (NEVER commit!)
+credentials.env
+*.env
+!*.env.template
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Local testing
+test/
+tmp/

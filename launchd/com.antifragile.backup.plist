@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Unique identifier for this job -->
+    <key>Label</key>
+    <string>com.antifragile.backup</string>
+
+    <!-- Run the backup script -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-l</string>
+        <string>-c</string>
+        <string>$HOME/dev/projects/antifragile_setup/scripts/backup-to-b2.sh</string>
+    </array>
+
+    <!-- Schedule: Daily at 12:00 (noon) -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>12</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Also run if scheduled time was missed (laptop was asleep) -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Hour</key>
+            <integer>12</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>ANTIFRAGILE_CONFIG</key>
+        <string>~/.config/antifragile</string>
+    </dict>
+
+    <!-- Don't run at system load -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Standard output and error logging -->
+    <key>StandardOutPath</key>
+    <string>~/.local/log/antifragile/launchd-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>~/.local/log/antifragile/launchd-stderr.log</string>
+
+    <!-- Nice level (lower priority) -->
+    <key>Nice</key>
+    <integer>10</integer>
+
+    <!-- Low priority I/O -->
+    <key>LowPriorityIO</key>
+    <true/>
+
+    <!-- Network required -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>NetworkState</key>
+        <true/>
+    </dict>
+</dict>
+</plist>

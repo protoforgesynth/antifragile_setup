@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.antifragile.usb-watcher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-l</string>
+        <string>-c</string>
+        <string>$HOME/dev/projects/antifragile_setup/scripts/backup-to-usb-auto.sh</string>
+    </array>
+
+    <!-- Trigger when ANTIFRAGILE volume appears -->
+    <key>WatchPaths</key>
+    <array>
+        <string>/Volumes/ANTIFRAGILE</string>
+    </array>
+
+    <!-- Environment -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <!-- Don't run at login, only when USB inserted -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Logging -->
+    <key>StandardOutPath</key>
+    <string>/tmp/antifragile-usb.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/antifragile-usb.log</string>
+
+    <!-- Low priority -->
+    <key>Nice</key>
+    <integer>10</integer>
+    <key>LowPriorityIO</key>
+    <true/>
+</dict>
+</plist>
